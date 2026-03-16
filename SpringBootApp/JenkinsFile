@@ -14,14 +14,22 @@ pipeline {
       }
     }
 
-    stage('Build and Test') {
+    stage('Check Files') {
     steps {
-        sh '''
-        cd SpringBootApp
-        mvn clean package
-        '''
+        sh 'pwd'
+        sh 'ls -l'
+        sh 'ls -l SpringBootApp'
     }
-}
+  }
+
+   stage('Build and Test') {
+    steps {
+        dir('SpringBootApp') {
+            sh 'mvn clean package'
+        }
+    }
+   }
+
 
     stage('Static Code Analysis') {
       steps {
