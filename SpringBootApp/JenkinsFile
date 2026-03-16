@@ -15,10 +15,13 @@ pipeline {
     }
 
     stage('Build and Test') {
-      steps {
-        sh 'mvn clean package'
-      }
+    steps {
+        sh '''
+        cd SpringBootApp
+        mvn clean package
+        '''
     }
+}
 
     stage('Static Code Analysis') {
       steps {
