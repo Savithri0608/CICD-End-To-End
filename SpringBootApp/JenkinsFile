@@ -2,7 +2,7 @@ pipeline {
 agent {
   docker {
     image 'savithri06/jenkins-agent:latest'
-    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock'
+    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
     reuseNode true
   }
 }
@@ -41,8 +41,6 @@ stage('Static Code Analysis') {
 }
 
 stage('Build and Push Docker Image') {
-  agent any
-
   steps {
     dir('SpringBootApp') {
       script {
