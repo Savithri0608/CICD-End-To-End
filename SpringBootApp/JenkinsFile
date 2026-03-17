@@ -66,11 +66,11 @@ stage('Update Deployment YAML') {
     checkout scm
 
     withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-      sh 
+      sh """
         pwd
         ls -la
 
-        sed -i "s|image: savithri06/springboot_boot:.*|image: savithri06/springboot_boot:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
+        sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
 
         git config user.email "${GIT_USER}@users.noreply.github.com"
         git config user.name "${GIT_USER}"
@@ -78,8 +78,8 @@ stage('Update Deployment YAML') {
         git add springboot-k8s-manifests/deployment.yaml || true
         git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
 
-        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/CICD-End-To-End HEAD:main
-      
+        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${GIT_REPO} HEAD:main
+      """
     }
   }
 }
