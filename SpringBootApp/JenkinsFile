@@ -1,99 +1,100 @@
 pipeline {
 
-agent {
-docker {
-image 'savithri06/jenkins-agent:latest'
-args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
-reuseNode true
-}
-}
-
-options {
-timestamps()
-durabilityHint('PERFORMANCE_OPTIMIZED')
-}
-
-environment {
-APP_DIR = "SpringBootApp"
-IMAGE_NAME = "savithri06/springboot_boot"
-GIT_REPO = "CICD-End-To-End"
-GIT_USER = "Savithri0608"
-}
-
-stages {
-
-
-stage('Checkout') {
-  steps {
-    checkout scm
-  }
-}
-
-stage('Build and Test') {
-  steps {
-    dir("${APP_DIR}") {
-      sh '/bin/sh -xe -c "mvn clean package"'
+  agent {
+    docker {
+      image 'savithri06/jenkins-agent:latest'
+      args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
+      reuseNode true
     }
   }
-}
 
-stage('Static Code Analysis') {
-  steps {
-    dir("${APP_DIR}") {
-      withSonarQubeEnv('sonarqube') {
-        sh '/bin/sh -xe -c "mvn sonar:sonar"'
+  options {
+    timestamps()
+    durabilityHint('PERFORMANCE_OPTIMIZED')
+  }
+
+  environment {
+    APP_DIR    = "SpringBootApp"
+    IMAGE_NAME = "savithri06/springboot_boot"
+    GIT_REPO   = "CICD-End-To-End"
+    GIT_OWNER  = "Savithri0608"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkout scm
       }
     }
-  }
-}
 
-stage('Build and Push Docker Image') {
-  steps {
-    dir("${APP_DIR}") {
-      script {
-        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-          def image = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
-          image.push()
-          image.push("latest")
+    stage('Build and Test') {
+      steps {
+        dir("${APP_DIR}") {
+          sh 'mvn clean package'
         }
       }
     }
+
+    stage('Static Code Analysis') {
+      steps {
+        dir("${APP_DIR}") {
+          withSonarQubeEnv('sonarqube') {
+            sh 'mvn sonar:sonar'
+          }
+        }
+      }
+    }
+
+    stage('Build and Push Docker Image') {
+      steps {
+        dir("${APP_DIR}") {
+          script {
+            docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
+              def image = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
+              image.push()
+              image.push("latest")
+            }
+          }
+        }
+      }
+    }
+
+    stage('Update Deployment YAML') {
+      steps {
+        withCredentials([
+          usernamePassword(
+            credentialsId: 'github-creds',
+            usernameVariable: 'GIT_USERNAME',
+            passwordVariable: 'GIT_TOKEN'
+          )
+        ]) {
+          sh '''
+            #!/bin/bash
+            set -e
+
+            echo "Updating deployment.yaml..."
+
+            sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
+
+            git config user.email "${GIT_USERNAME}@users.noreply.github.com"
+            git config user.name "${GIT_USERNAME}"
+
+            git add springboot-k8s-manifests/deployment.yaml || true
+            git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
+
+            git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO} HEAD:main
+          '''
+        }
+      }
+    }
+
   }
-}
 
-stage('Update Deployment YAML') {
-  steps {
-    checkout scm
-
-    withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-      sh(script: """
-        #!/bin/bash
-        set -e
-
-        pwd
-        ls -la
-
-        sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
-
-        git config user.email "${GIT_USER}@users.noreply.github.com"
-        git config user.name "${GIT_USER}"
-
-        git add springboot-k8s-manifests/deployment.yaml || true
-        git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
-
-        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${GIT_REPO} HEAD:main
-      """)
+  post {
+    always {
+      cleanWs()
+      sh 'docker image prune -f'
     }
   }
-}
-
-
-}
-
-post {
-always {
-cleanWs()
-sh 'docker system prune -f'
-}
-}
 }
