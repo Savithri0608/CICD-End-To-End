@@ -70,7 +70,7 @@ stage('Update Deployment YAML') {
         git config user.email "${GIT_USER}@users.noreply.github.com"
         git config user.name "${GIT_USER}"
 
-        git add k8s/deployment.yaml || true
+        git add springboot-k8s-manifests/deployment.yaml || true
         git commit -m "Update image to ${BUILD_NUMBER}" || echo "No changes"
 
         git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${GIT_REPO} HEAD:main
