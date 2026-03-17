@@ -60,36 +60,44 @@ pipeline {
       }
     }
 
-    stage('Update Deployment YAML') {
-      steps {
-        withCredentials([
-          usernamePassword(
-            credentialsId: 'github-creds',
-            usernameVariable: 'GIT_USERNAME',
-            passwordVariable: 'GIT_TOKEN'
-          )
-        ]) {
-          sh '''
-            #!/bin/bash
-            set -e
+   stage('Update Deployment YAML') {
+  steps {
+    dir("${WORKSPACE}") {   // 👈 ensure root repo location
 
-            echo "Updating deployment.yaml..."
+      withCredentials([
+        usernamePassword(
+          credentialsId: 'github-creds',
+          usernameVariable: 'GIT_USERNAME',
+          passwordVariable: 'GIT_TOKEN'
+        )
+      ]) {
+        sh '''
+          #!/bin/bash
+          set -e
 
-            sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
+          echo "Where am I?"
+          pwd
+          ls -la
 
-            git config user.email "${GIT_USERNAME}@users.noreply.github.com"
-            git config user.name "${GIT_USERNAME}"
+          echo "Updating deployment.yaml..."
 
-            git add springboot-k8s-manifests/deployment.yaml || true
-            git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
+          sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
 
-            git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO} HEAD:main
-          '''
-        }
+          git status   # 👈 DEBUG (you should see repo now)
+
+          git config user.email "${GIT_USERNAME}@users.noreply.github.com"
+          git config user.name "${GIT_USERNAME}"
+
+          git add springboot-k8s-manifests/deployment.yaml || true
+          git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
+
+          git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO} HEAD:main
+        '''
       }
-    }
 
+    }
   }
+}
 
   post {
     always {
