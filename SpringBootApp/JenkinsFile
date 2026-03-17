@@ -1,40 +1,47 @@
 pipeline {
+
 agent {
-  docker {
-    image 'savithri06/jenkins-agent:latest'
-    args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
-    reuseNode true
-  }
+docker {
+image 'savithri06/jenkins-agent:latest'
+args '-u root:root -v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""'
+reuseNode true
 }
-//test1
+}
+
+options {
+timestamps()
+durabilityHint('PERFORMANCE_OPTIMIZED')
+}
+
+environment {
+APP_DIR = "SpringBootApp"
+IMAGE_NAME = "savithri06/springboot_boot"
+GIT_REPO = "CICD-End-To-End"
+GIT_USER = "Savithri0608"
+}
+
 stages {
+
+```
 stage('Checkout') {
   steps {
     checkout scm
   }
 }
 
-stage('Check Files') {
-  steps {
-    sh 'pwd'
-    sh 'ls -l'
-    sh 'ls -l SpringBootApp'
-  }
-}
-
 stage('Build and Test') {
   steps {
-    dir('SpringBootApp') {
-      sh 'mvn clean package'
+    dir("${APP_DIR}") {
+      sh '/bin/sh -xe -c "mvn clean package"'
     }
   }
 }
 
 stage('Static Code Analysis') {
   steps {
-    dir('SpringBootApp') {
+    dir("${APP_DIR}") {
       withSonarQubeEnv('sonarqube') {
-        sh 'mvn sonar:sonar'
+        sh '/bin/sh -xe -c "mvn sonar:sonar"'
       }
     }
   }
@@ -42,15 +49,43 @@ stage('Static Code Analysis') {
 
 stage('Build and Push Docker Image') {
   steps {
-    dir('SpringBootApp') {
+    dir("${APP_DIR}") {
       script {
         docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-          def image = docker.build("savithri06/springboot_boot:${BUILD_NUMBER}")
+          def image = docker.build("${IMAGE_NAME}:${BUILD_NUMBER}")
           image.push()
+          image.push("latest")
         }
       }
     }
   }
+}
 
+stage('Update Deployment YAML') {
+  steps {
+    withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+      sh """
+        sed -i "s|image: savithri06/springboot_boot:.*|image: savithri06/springboot_boot:${BUILD_NUMBER}|g" k8s/deployment.yaml
+
+        git config user.email "${GIT_USER}@users.noreply.github.com"
+        git config user.name "${GIT_USER}"
+
+        git add k8s/deployment.yaml || true
+        git commit -m "Update image to ${BUILD_NUMBER}" || echo "No changes"
+
+        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${GIT_REPO} HEAD:main
+      """
+    }
+  }
+}
+```
+
+}
+
+post {
+always {
+cleanWs()
+sh 'docker system prune -f'
+}
 }
 }
