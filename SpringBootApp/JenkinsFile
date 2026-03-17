@@ -71,9 +71,9 @@ stage('Update Deployment YAML') {
         git config user.name "${GIT_USER}"
 
         git add springboot-k8s-manifests/deployment.yaml || true
-        git commit -m "Update image to ${BUILD_NUMBER}" || echo "No changes"
+        git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
 
-        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/${GIT_REPO} HEAD:main
+        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/CICD-End-To-End HEAD:main
       """
     }
   }
