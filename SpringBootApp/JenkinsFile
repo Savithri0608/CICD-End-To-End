@@ -63,11 +63,10 @@ stage('Build and Push Docker Image') {
 
 stage('Update Deployment YAML') {
   steps {
-    // 🔥 FORCE checkout again
     checkout scm
 
     withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
-      sh '''
+      sh 
         pwd
         ls -la
 
@@ -80,7 +79,7 @@ stage('Update Deployment YAML') {
         git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
 
         git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GIT_USER}/CICD-End-To-End HEAD:main
-      '''
+      
     }
   }
 }
