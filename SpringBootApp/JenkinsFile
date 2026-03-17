@@ -6,7 +6,7 @@ agent {
     reuseNode true
   }
 }
-//test
+//test1
 stages {
 stage('Checkout') {
   steps {
@@ -51,8 +51,6 @@ stage('Build and Push Docker Image') {
       }
     }
   }
-}
-
 
 }
 }
