@@ -62,7 +62,7 @@ pipeline {
 
    stage('Update Deployment YAML') {
   steps {
-    dir("${WORKSPACE}") {   //  ensure root repo location
+    dir("${WORKSPACE}") {  
 
       withCredentials([
         usernamePassword(
