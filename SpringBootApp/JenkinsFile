@@ -22,7 +22,7 @@ GIT_USER = "Savithri0608"
 
 stages {
 
-```
+
 stage('Checkout') {
   steps {
     checkout scm
@@ -78,7 +78,7 @@ stage('Update Deployment YAML') {
     }
   }
 }
-```
+
 
 }
 
