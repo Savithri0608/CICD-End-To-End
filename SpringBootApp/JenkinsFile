@@ -84,7 +84,13 @@ pipeline {
 
           echo "Updating deployment.yaml..."
 
-          sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
+          echo "Before:"
+          cat springboot-k8s-manifests/deployment.yaml
+
+          sed -i "s|${IMAGE_NAME}:[0-9]*|${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
+
+          echo "After:"
+          cat springboot-k8s-manifests/deployment.yaml
 
           git status
 
