@@ -75,27 +75,29 @@ pipeline {
           #!/bin/bash
           set -e
 
+          echo "Fix git ownership issue FIRST"
+          git config --global --add safe.directory ${WORKSPACE}
+
           echo "Fix git detached HEAD"
           git checkout main
 
-git config --global --add safe.directory ${WORKSPACE}
+          echo "Before:"
+          cat springboot-k8s-manifests/deployment.yaml
 
-echo "Before:"
-cat springboot-k8s-manifests/deployment.yaml
+          echo "Updating image..."
+          sed -i "s|${IMAGE_NAME}:.*|${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
 
-sed -i "s|${IMAGE_NAME}:.*|${IMAGE_NAME}:${BUILD_NUMBER}|g" springboot-k8s-manifests/deployment.yaml
+          echo "After:"
+          cat springboot-k8s-manifests/deployment.yaml
 
-echo "After:"
-cat springboot-k8s-manifests/deployment.yaml
+          git config user.email "${GIT_USERNAME}@users.noreply.github.com"
+          git config user.name "${GIT_USERNAME}"
 
-git config user.email "${GIT_USERNAME}@users.noreply.github.com"
-git config user.name "${GIT_USERNAME}"
+          git add springboot-k8s-manifests/deployment.yaml
+          git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
 
-git add springboot-k8s-manifests/deployment.yaml
-git commit -m "[skip ci] Update image to ${BUILD_NUMBER}" || echo "No changes"
-
-git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO} main
-        '''
+          git push https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/${GIT_OWNER}/${GIT_REPO} main
+            '''
       }
 
     }
